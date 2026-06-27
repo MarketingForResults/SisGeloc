@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── USUÁRIOS DO SISTEMA ──────────────────────────────────────────────────────
+model Usuario {
+  id        String   @id @default(uuid())
+  nome      String
+  email     String   @unique
+  senha     String
+  perfil    Perfil   @default(OPERADOR)
+  ativo     Boolean  @default(true)
+  criadoEm DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@map("usuarios")
+}
+
+enum Perfil {
+  ADMIN
+  OPERADOR
+  VISUALIZADOR
+}
+
+// ── PROPRIETÁRIOS ────────────────────────────────────────────────────────────
+model Proprietario {
+  id        String      @id @default(uuid())
+  tipo      TipoPessoa  @default(FISICA)
+  nome      String
+  cpfCnpj   String      @unique
+  rg        String?
+  email     String      @unique
+  telefone  String
+  ativo     Boolean     @default(true)
+  criadoEm DateTime    @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  endereco  Endereco?
+  veiculos  Veiculo[]
+
+  @@map("proprietarios")
+}
+
+enum TipoPessoa {
+  FISICA
+  JURIDICA
+}
+
+// ── ENDEREÇOS ────────────────────────────────────────────────────────────────
+model Endereco {
+  id            String  @id @default(uuid())
+  cep           String
+  logradouro    String
+  numero        String
+  complemento   String?
+  bairro        String
+  cidade        String
+  estado        String
+
+  proprietarioId String? @unique
+  proprietario   Proprietario? @relation(fields: [proprietarioId], references: [id])
+
+  motoristaid   String? @unique
+  motorista     Motorista? @relation(fields: [motoristaid], references: [id])
+
+  @@map("enderecos")
+}
+
+// ── MOTORISTAS ───────────────────────────────────────────────────────────────
+model Motorista {
+  id              String    @id @default(uuid())
+  nome            String
+  cpf             String    @unique
+  dataNascimento  DateTime
+  telefone        String
+  email           String    @unique
+  cnh             String    @unique
+  categoriaCnh    String
+  validadeCnh     DateTime
+  ativo           Boolean   @default(true)
+  bloqueado       Boolean   @default(false)
+  motivoBloqueio  String?
+  criadoEm       DateTime  @default(now())
+  atualizadoEm   DateTime  @updatedAt
+
+  endereco  Endereco?
+  locacoes  Locacao[]
+
+  @@map("motoristas")
+}
+
+// ── VEÍCULOS ─────────────────────────────────────────────────────────────────
+model Veiculo {
+  id            String        @id @default(uuid())
+  placa         String        @unique
+  chassi        String        @unique
+  renavam       String        @unique
+  marca         String
+  modelo        String
+  anoFabricacao Int
+  anoModelo     Int
+  cor           String
+  combustivel   String
+  cambio        String
+  status        StatusVeiculo @default(DISPONIVEL)
+  criadoEm     DateTime      @default(now())
+  atualizadoEm DateTime      @updatedAt
+
+  proprietarioId String
+  proprietario   Proprietario @relation(fields: [proprietarioId], references: [id])
+  locacoes       Locacao[]
+
+  @@map("veiculos")
+}
+
+enum StatusVeiculo {
+  DISPONIVEL
+  ALUGADO
+  MANUTENCAO
+  INATIVO
+}
+
+// ── LOCAÇÕES ─────────────────────────────────────────────────────────────────
+model Locacao {
+  id           String        @id @default(uuid())
+  dataInicio   DateTime
+  dataFim      DateTime
+  valorDiaria  Decimal       @db.Decimal(10, 2)
+  valorTotal   Decimal?      @db.Decimal(10, 2)
+  status       StatusLocacao @default(RESERVADO)
+  observacoes  String?
+  criadoEm    DateTime      @default(now())
+  atualizadoEm DateTime     @updatedAt
+
+  veiculoId  String
+  veiculo    Veiculo   @relation(fields: [veiculoId], references: [id])
+  motoristaid String
+  motorista  Motorista @relation(fields: [motoristaid], references: [id])
+
+  @@map("locacoes")
+}
+
+enum StatusLocacao {
+  RESERVADO
+  EM_ANDAMENTO
+  DEVOLVIDO
+  CANCELADO
+  INADIMPLENTE
+}
